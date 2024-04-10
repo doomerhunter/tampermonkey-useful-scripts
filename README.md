@@ -10,3 +10,11 @@ Blog post :
 
 Tampermonkey : 
 - [https://www.tampermonkey.net/](https://www.tampermonkey.net/)
+
+## Scripts 
+
+- rewrite-element-class.js
+  - Get all the elements by their tag name, in this case `div`
+  - Iterate over these elements and check if they have a certain attribute (`class`)
+  - If that attribute contains a string that I don't like (`disabled`)
+  - Then rewrite that attribute 
