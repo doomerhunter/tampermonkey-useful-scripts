@@ -17,7 +17,7 @@
     const links = localStorage.getItem('collectedLinks');
 
     if (!links) {
-        alert('لا توجد روابط مخزنة في التخزين المحلي!');
+        alert('No links stored in local storage!');
         return;
     }
 
@@ -26,7 +26,7 @@
 
     // Copy to clipboard
     navigator.clipboard.writeText(urlList)
-        .then(() => console.log('تم نسخ الروابط إلى الحافظة'))
+        .then(() => console.log('Links copied to clipboard'))
         .catch(err => console.error('فشل النسخ:', err));
 
     // Download file
@@ -42,8 +42,8 @@
 
     // Clear localStorage
     localStorage.removeItem('collectedLinks');
-    console.log('تم مسح الروابط من التخزين المحلي');
+    console.log('Links have been removed from local storage');
 
     // Notify user
-    alert('تم نسخ الروابط إلى الحافظة، تنزيلها، ومسحها من التخزين!');
+    alert('Links copied to clipboard, downloaded, and cleared from storage!');
 })();
