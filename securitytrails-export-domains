@@ -1,0 +1,226 @@
+// ==UserScript==
+// @name         SecurityTrails - Extract Domain Links and Paginate
+// @namespace    http://tampermonkey.net/
+// @version      2024-02-20
+// @description  Extract domain links from SecurityTrails, store in localStorage, and navigate pages
+// @author       You
+// @match        https://securitytrails.com/*
+// @icon         https://securitytrails.com/favicon.ico
+// @grant        GM_setClipboard
+// @run-at       document-end
+// ==/UserScript==
+
+(function() {
+    'use strict';
+    console.log("SecurityTrails Link Extractor activated");
+
+    // Initialize localStorage if needed
+    if (!localStorage.getItem('domainLinks')) {
+        localStorage.setItem('domainLinks', JSON.stringify({
+            links: [],
+            timestamp: new Date().toISOString(),
+            count: 0
+        }));
+    }
+
+    // Function to get domain links from the current page
+    function getDomainLinks() {
+        const allLinks = document.querySelectorAll('a');
+
+        const domainLinks = Array.from(allLinks)
+            .filter(link => {
+                const href = link.getAttribute('href');
+                return href && href.startsWith('/domain/');
+            })
+            .map(link => {
+                const href = link.getAttribute('href');
+                // Remove the /domain/ prefix and everything after the next slash if present
+                const domainWithPath = href.replace('/domain/', '');
+                // Extract just the domain name by removing everything after the first slash
+                const slashIndex = domainWithPath.indexOf('/');
+                return slashIndex > -1 ? domainWithPath.substring(0, slashIndex) : domainWithPath;
+            });
+
+        return domainLinks;
+    }
+
+    // Function to store links in localStorage
+    function storeDomainLinks() {
+        const newLinks = getDomainLinks();
+        const storedData = JSON.parse(localStorage.getItem('domainLinks'));
+
+        // Combine with existing links and remove duplicates
+        const combinedLinks = [...new Set([...storedData.links, ...newLinks])];
+
+        // Create a data object with links and timestamp
+        const data = {
+            links: combinedLinks,
+            timestamp: new Date().toISOString(),
+            count: combinedLinks.length
+        };
+
+        // Store in localStorage
+        localStorage.setItem('domainLinks', JSON.stringify(data));
+
+        console.log(`Stored ${combinedLinks.length} domain links in localStorage (${newLinks.length} new links added)`);
+        return combinedLinks;
+    }
+
+    // Function to copy links to clipboard
+    function copyLinksToClipboard() {
+        const storedData = JSON.parse(localStorage.getItem('domainLinks'));
+
+        if (!storedData || !storedData.links.length) {
+            console.log('No links to copy');
+            return false;
+        }
+
+        // Convert links array to text
+        const linksText = storedData.links.join('\n');
+
+        // Use GM_setClipboard if available, otherwise use navigator.clipboard
+        if (typeof GM_setClipboard !== 'undefined') {
+            GM_setClipboard(linksText);
+            console.log('Links copied to clipboard using GM_setClipboard');
+        } else {
+            navigator.clipboard.writeText(linksText)
+                .then(() => {
+                    console.log('Links copied to clipboard successfully');
+                })
+                .catch(err => {
+                    console.error('Failed to copy links to clipboard', err);
+                });
+        }
+
+        return true;
+    }
+
+    // Function to click the next page button
+    function clickNextPage() {
+        const nextButton = document.evaluate(
+            '//a[contains(text(), "›")]',
+            document,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+        ).singleNodeValue;
+
+        if (nextButton) {
+            console.log('Clicking next page button...');
+            nextButton.click();
+            return true;
+        } else {
+            console.log('Next page button not found');
+            return false;
+        }
+    }
+
+    // Function to clear stored links
+    function clearStoredLinks() {
+        localStorage.setItem('domainLinks', JSON.stringify({
+            links: [],
+            timestamp: new Date().toISOString(),
+            count: 0
+        }));
+        console.log('Cleared all stored domain links');
+    }
+
+    // Main function to process current page and navigate to next
+    function processPageAndGoToNext() {
+        // 1. Store domain links
+        storeDomainLinks();
+
+        // 2. Copy links to clipboard
+        copyLinksToClipboard();
+
+        // 3. Go to next page
+        return clickNextPage();
+    }
+
+    // Add keyboard shortcut listeners
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+Shift+E: Extract links, copy to clipboard, and go to next page
+        if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+            e.preventDefault();
+            processPageAndGoToNext();
+        }
+
+        // Ctrl+Shift+C: Copy links to clipboard
+        if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+            e.preventDefault();
+            copyLinksToClipboard();
+        }
+
+        // Ctrl+Shift+X: Clear all stored links
+        if (e.ctrlKey && e.shiftKey && e.key === 'X') {
+            e.preventDefault();
+            clearStoredLinks();
+        }
+
+        // Ctrl+Shift+S: Store links only (no copy, no navigation)
+        if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+            e.preventDefault();
+            storeDomainLinks();
+        }
+
+        // Ctrl+Shift+N: Navigate to next page only
+        if (e.ctrlKey && e.shiftKey && e.key === 'N') {
+            e.preventDefault();
+            clickNextPage();
+        }
+    });
+
+    // Add a floating control panel
+    function addControlPanel() {
+        const panel = document.createElement('div');
+        panel.style.position = 'fixed';
+        panel.style.bottom = '20px';
+        panel.style.right = '20px';
+        panel.style.padding = '10px';
+        panel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        panel.style.color = 'white';
+        panel.style.borderRadius = '5px';
+        panel.style.zIndex = '9999';
+        panel.style.fontSize = '12px';
+        panel.innerHTML = `
+            <div style="margin-bottom:5px;font-weight:bold;text-align:center;">SecurityTrails Link Extractor</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <button id="stExtractBtn">Extract & Next (Ctrl+Shift+E)</button>
+                <button id="stCopyBtn">Copy Links (Ctrl+Shift+C)</button>
+                <button id="stClearBtn">Clear Links (Ctrl+Shift+X)</button>
+                <div id="stLinkCount" style="margin-top:5px;text-align:center;"></div>
+            </div>
+        `;
+        document.body.appendChild(panel);
+
+        // Update link count
+        function updateLinkCount() {
+            const storedData = JSON.parse(localStorage.getItem('domainLinks'));
+            const countElement = document.getElementById('stLinkCount');
+            if (countElement && storedData) {
+                countElement.textContent = `Stored: ${storedData.count} links`;
+            }
+        }
+
+        // Add event listeners
+        document.getElementById('stExtractBtn').addEventListener('click', () => {
+            processPageAndGoToNext();
+            setTimeout(updateLinkCount, 500);
+        });
+
+        document.getElementById('stCopyBtn').addEventListener('click', () => {
+            copyLinksToClipboard();
+        });
+
+        document.getElementById('stClearBtn').addEventListener('click', () => {
+            clearStoredLinks();
+            updateLinkCount();
+        });
+
+        // Initial count update
+        updateLinkCount();
+    }
+
+    // Add the control panel after a short delay
+    setTimeout(addControlPanel, 1000);
+})();
