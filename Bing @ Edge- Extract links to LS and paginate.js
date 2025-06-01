@@ -12,7 +12,7 @@
 
 (function() {
     'use strict';
-    console.log("تم تفعيل السكربت");
+    console.log("The script has been activated.");
 
     // Function to clean Bing tracking URLs
     function cleanUrl(url) {
@@ -24,7 +24,7 @@
             }
             return url; // Return original URL if no redirect
         } catch (e) {
-            console.error("فشل فك تشفير الرابط:", url, e);
+            console.error("Link decryption failed:", url, e);
             return null; // Return null for invalid URLs
         }
     }
@@ -49,24 +49,24 @@
                     .filter(url => url && !url.includes('bing.com') && !url.startsWith('javascript:') && url !== '');
 
                 if (currentLinks.length === 0) {
-                    console.log("لم يتم العثور على روابط في نتائج البحث");
+                    console.log("No links found in search results");
                     console.log("حاوية النتائج موجودة:", !!resultsContainer);
                 } else {
                     let storedLinks = JSON.parse(localStorage.getItem('collectedLinks'));
                     storedLinks.push(...currentLinks);
                     localStorage.setItem('collectedLinks', JSON.stringify([...new Set(storedLinks)])); // Remove duplicates
-                    console.log("الروابط المجمعة:", currentLinks);
+                    console.log("Aggregate links:", currentLinks);
                     console.log("التخزين الحالي:", JSON.parse(localStorage.getItem('collectedLinks')));
                 }
 
                 // Click next page
                 const nextButton = document.querySelector('a[title="Next page"], a.sb_pagN, a[aria-label="Next Page"], a.b_pag a');
                 if (nextButton) {
-                    console.log("الانتقال إلى الصفحة التالية...");
+                    console.log("Go to the next page...");
                     nextButton.click();
                 } else {
-                    console.log("لا توجد صفحة تالية");
-                    alert("تم جمع كل الروابط! استخدم 'Export and Clear' لتصديرها.");
+                    console.log("No next page");
+                    alert("All links collected! Use 'Export and Clear' to export them.");
                 }
             }
         }, 2000); // Check every 2000ms
